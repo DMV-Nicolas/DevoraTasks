@@ -16,8 +16,9 @@ OFFSET $2;
 
 -- name: UpdateUser :one
 UPDATE users
-SET email = $2,
-hashed_password = $3
+SET username= $2,
+email = $3,
+hashed_password = $4
 WHERE id = $1
 RETURNING *;
 
