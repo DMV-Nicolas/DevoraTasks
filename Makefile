@@ -8,6 +8,8 @@ migrateup:
 	migrate -path db/migration -database "postgresql://root:83postgres19@localhost:5432/tasks?sslmode=disable" -verbose up 
 migratedown:
 	migrate -path db/migration -database "postgresql://root:83postgres19@localhost:5432/tasks?sslmode=disable" -verbose down
+sqlc:
+	sqlc generate
 test:
 	go clean -testcache
 	go test -v --cover ./...

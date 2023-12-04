@@ -11,7 +11,8 @@ CREATE TABLE "tasks" (
   "id" bigserial PRIMARY KEY,
   "user_id" bigint NOT NULL,
   "title" varchar NOT NULL,
-  "description" varchar,
+  "description" varchar NOT NULL,
+  "done" boolean NOT NULL DEFAULT 'FALSE',
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
