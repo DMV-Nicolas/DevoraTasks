@@ -72,7 +72,7 @@ func TestUpdateTask(t *testing.T) {
 	arg := UpdateTaskParams{
 		ID:          task1.ID,
 		Title:       util.RandomTitle() + ":)",
-		Description: util.RandomPassword(10),
+		Description: "Updated task",
 		Done:        true,
 	}
 
@@ -89,7 +89,7 @@ func TestUpdateTask(t *testing.T) {
 }
 
 func TestDeleteTask(t *testing.T) {
-	task1 := createRandomUser(t)
+	task1 := createRandomTask(t, "Delete task")
 	err := testQueries.DeleteTask(context.Background(), task1.ID)
 	require.NoError(t, err)
 

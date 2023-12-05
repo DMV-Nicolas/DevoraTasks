@@ -5,9 +5,9 @@ createdb:
 dropdb:
 	docker exec -it faztcode dropdb tasks
 migrateup:
-	migrate -path db/migration -database "postgresql://root:83postgres19@localhost:5432/tasks?sslmode=disable" -verbose up 
+	./migrate -path db/migration -database "postgresql://root:83postgres19@localhost:5432/tasks?sslmode=disable" -verbose up 
 migratedown:
-	migrate -path db/migration -database "postgresql://root:83postgres19@localhost:5432/tasks?sslmode=disable" -verbose down
+	./migrate -path db/migration -database "postgresql://root:83postgres19@localhost:5432/tasks?sslmode=disable" -verbose down
 sqlc:
 	sqlc generate
 test:
