@@ -14,5 +14,5 @@ test:
 	go clean -testcache
 	go test -v --cover ./...
 server:
-	air
+	go run main.go
 .PHONY: postgres createdb dropdb migrateup migratedown server

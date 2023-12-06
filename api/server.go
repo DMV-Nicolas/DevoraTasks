@@ -20,6 +20,8 @@ func NewServer(db *db.Queries) *Server {
 
 	router.HandleFunc("/", Home).Methods("GET")
 
+	router.HandleFunc("/users", server.createUser).Methods("POST")
+
 	server.router = router
 	return server
 }
@@ -41,4 +43,13 @@ func errorResponse(err1 error) []byte {
 	}
 
 	return []byte(newRes)
+}
+
+func jsonResponse(res any) []byte {
+	newRes, err := json.Marshal(res)
+	if err != nil {
+		log.Fatal("Cannot marshal the error response")
+	}
+
+	return newRes
 }
