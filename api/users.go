@@ -26,7 +26,12 @@ func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//TODO: Verify requirements with a util package
+	err = util.VerifyRequirements(req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(errorResponse(err))
+		return
+	}
 
 	hashedPassword, err := util.HashPassword(req.Password)
 	if err != nil {
