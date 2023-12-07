@@ -3,13 +3,14 @@ package util
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 )
 
 var avalaibleRequirements = []string{
-	"required", "email", "min", "max", "",
+	"required", "email", "min", "max",
 }
 
 type requirement struct {
@@ -106,7 +107,12 @@ func (r requirement) Max() error {
 }
 
 func (r requirement) Email() (err error) {
-	return nil
+	regexPattern := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	isEmail := regexPattern.MatchString(r.fieldValue)
+	if !isEmail {
+		err = fmt.Errorf("Requirements error: '%s' is not an Email", r.fieldValue)
+	}
+	return err
 }
 
 func GetRequirements(obj any) []requirement {
@@ -134,10 +140,14 @@ func GetRequirements(obj any) []requirement {
 		}
 
 		tags := strings.Split(t.Field(i).Tag.Get("requirements"), ";")
+		if tags[0] == "" {
+			continue
+		}
 		for _, tag := range tags {
 			index := strings.Index(tag, "=")
 			reqName := tag
 			reqValue := "true"
+
 			if index > 0 {
 				reqName = tag[:index]
 				if len(tag)-1 == index {
