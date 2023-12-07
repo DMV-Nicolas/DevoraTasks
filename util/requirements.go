@@ -9,7 +9,7 @@ import (
 )
 
 var avalaibleRequirements = []string{
-	"required", "email", "min", "max",
+	"required", "email", "min", "max", "",
 }
 
 type requirement struct {

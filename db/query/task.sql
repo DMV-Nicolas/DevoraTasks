@@ -11,8 +11,8 @@ LIMIT 1;
 -- name: ListTasks :many
 SELECT * FROM tasks
 ORDER BY id
-LIMIT $1
-OFFSET $2;
+OFFSET $1
+LIMIT $2;
 
 -- name: UpdateTask :one
 UPDATE tasks
