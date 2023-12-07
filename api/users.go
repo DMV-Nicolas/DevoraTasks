@@ -2,11 +2,14 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	db "github.com/DMV-Nicolas/DevoraTasks/db/sqlc"
 	"github.com/DMV-Nicolas/DevoraTasks/util"
+	"github.com/gorilla/mux"
 	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -59,6 +62,31 @@ func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 				w.Write(errorResponse(err))
 				return
 			}
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(errorResponse(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse(user))
+}
+
+func (server *Server) getUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(errorResponse(err))
+		return
+	}
+
+	user, err := server.db.GetUser(context.Background(), int64(id))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(errorResponse(err))
+			return
 		}
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(errorResponse(err))

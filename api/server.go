@@ -21,6 +21,7 @@ func NewServer(db *db.Queries) *Server {
 	router.HandleFunc("/", Home).Methods("GET")
 
 	router.HandleFunc("/users", server.createUser).Methods("POST")
+	router.HandleFunc("/users/{id}", server.getUser).Methods("GET")
 
 	server.router = router
 	return server
