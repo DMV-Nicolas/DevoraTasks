@@ -107,7 +107,79 @@ func (server *Server) getTask(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResponse(task))
 }
 
-func (server *Server) updateTask(w http.ResponseWriter, r *http.Request) {
+type updateTaskRequest struct {
+	ID          int64  `json:"id" requirements:"required"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Done        bool   `json:"done"`
 }
+
+func (server *Server) updateTask(w http.ResponseWriter, r *http.Request) {
+	var req updateTaskRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(errorResponse(err))
+		return
+	}
+
+	err = util.VerifyRequirements(req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(errorResponse(err))
+		return
+	}
+
+	arg := db.UpdateTaskParams{
+		ID:          req.ID,
+		Title:       req.Title,
+		Description: req.Description,
+		Done:        req.Done,
+	}
+
+	task, err := server.db.UpdateTask(context.Background(), arg)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(errorResponse(err))
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(errorResponse(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse(task))
+
+}
+
+type deleteTaskRequest struct {
+	ID int64 `json:"id" requirements:"required"`
+}
+
 func (server *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
+	var req deleteTaskRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(errorResponse(err))
+		return
+	}
+
+	err = util.VerifyRequirements(req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(errorResponse(err))
+		return
+	}
+
+	err = server.db.DeleteTask(context.Background(), req.ID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(errorResponse(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
