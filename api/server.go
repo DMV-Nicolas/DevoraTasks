@@ -10,11 +10,11 @@ import (
 )
 
 type Server struct {
-	db     *db.Queries
+	db     db.Store
 	router *mux.Router
 }
 
-func NewServer(db *db.Queries) *Server {
+func NewServer(db db.Store) *Server {
 	server := &Server{db: db}
 	router := mux.NewRouter()
 
@@ -26,7 +26,7 @@ func NewServer(db *db.Queries) *Server {
 	router.HandleFunc("/tasks", server.createTask).Methods("POST")
 	router.HandleFunc("/tasks", server.listTasks).Methods("GET")
 	router.HandleFunc("/tasks/{id}", server.getTask).Methods("GET")
-	router.HandleFunc("/tasks", server.updateTask).Methods("UPDATE")
+	router.HandleFunc("/tasks", server.updateTask).Methods("PUT")
 	router.HandleFunc("/tasks", server.deleteTask).Methods("DELETE")
 
 	server.router = router

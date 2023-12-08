@@ -7,6 +7,7 @@ import (
 	"github.com/DMV-Nicolas/DevoraTasks/api"
 	db "github.com/DMV-Nicolas/DevoraTasks/db/sqlc"
 	"github.com/DMV-Nicolas/DevoraTasks/util"
+	_ "github.com/golang/mock/mockgen/model"
 	_ "github.com/lib/pq"
 )
 
@@ -23,7 +24,7 @@ func main() {
 		log.Fatal("Cannot connect to database:", err)
 	}
 
-	db := db.New(conn)
+	db := db.NewStore(conn)
 	server := api.NewServer(db)
 
 	err = server.Start(config.ServerAddress)

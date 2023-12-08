@@ -84,3 +84,12 @@ func RandomTitle() string {
 	str += names[rand.Intn(len(names))]
 	return str
 }
+
+// RandomInt generates a random int number between min and max
+func RandomInt(min, max int) int {
+	return min + rand.Intn(max-min)
+}
+
+func RandomID() int64 {
+	return int64(RandomInt(1, 1000))
+}

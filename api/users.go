@@ -4,14 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	db "github.com/DMV-Nicolas/DevoraTasks/db/sqlc"
 	"github.com/DMV-Nicolas/DevoraTasks/util"
 	"github.com/gorilla/mux"
-	"github.com/lib/pq"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type createUserRequest struct {
@@ -38,11 +37,6 @@ func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 
 	hashedPassword, err := util.HashPassword(req.Password)
 	if err != nil {
-		if err == bcrypt.ErrPasswordTooLong {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(errorResponse(err))
-			return
-		}
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(errorResponse(err))
 	}
@@ -54,14 +48,12 @@ func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := server.db.CreateUser(context.Background(), arg)
+	fmt.Println(err)
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok {
-			switch pqErr.Code.Name() {
-			case "unique_violation":
-				w.WriteHeader(http.StatusForbidden)
-				w.Write(errorResponse(err))
-				return
-			}
+		if db.ErrorCode(err) == db.UniqueViolation {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write(errorResponse(err))
+			return
 		}
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(errorResponse(err))
@@ -72,19 +64,26 @@ func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResponse(user))
 }
 
+type getUserRequest struct {
+	ID int64 `requirements:"required;min=1"`
+}
+
 func (server *Server) getUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+	var req getUserRequest
+	id, _ := strconv.Atoi(mux.Vars(r)["id"])
+
+	req.ID = int64(id)
+	err := util.VerifyRequirements(req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))
 		return
 	}
 
-	user, err := server.db.GetUser(context.Background(), int64(id))
+	user, err := server.db.GetUser(context.Background(), req.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusNotFound)
 			w.Write(errorResponse(err))
 			return
 		}

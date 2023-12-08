@@ -282,7 +282,7 @@ func TestVerifyRequirements(t *testing.T) {
 	for _, x := range tests {
 		t.Run(x.name, func(t *testing.T) {
 			err := VerifyRequirements(x.request)
-			require.Equal(t, err != nil, x.isErr)
+			require.Equal(t, x.isErr, err != nil)
 		})
 	}
 

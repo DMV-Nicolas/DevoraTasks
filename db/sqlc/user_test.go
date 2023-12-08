@@ -11,10 +11,13 @@ import (
 )
 
 func createRandomUser(t *testing.T) User {
+	hashedPassword, err := util.HashPassword(util.RandomPassword(16))
+	require.NoError(t, err)
+
 	arg := CreateUserParams{
 		Username:       util.RandomUsername(),
 		Email:          util.RandomEmail(),
-		HashedPassword: util.RandomPassword(10),
+		HashedPassword: hashedPassword,
 	}
 
 	user, err := testQueries.CreateUser(context.Background(), arg)
@@ -69,12 +72,15 @@ func TestListUsers(t *testing.T) {
 }
 
 func TestUpdateUser(t *testing.T) {
+	hashedPassword, err := util.HashPassword(util.RandomPassword(16))
+	require.NoError(t, err)
+
 	user1 := createRandomUser(t)
 	arg := UpdateUserParams{
 		ID:             user1.ID,
 		Username:       util.RandomUsername() + ":)",
 		Email:          util.RandomEmail(),
-		HashedPassword: util.RandomPassword(20),
+		HashedPassword: hashedPassword,
 	}
 
 	user2, err := testQueries.UpdateUser(context.Background(), arg)
