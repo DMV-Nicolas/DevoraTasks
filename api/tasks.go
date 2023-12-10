@@ -134,7 +134,7 @@ func (server *Server) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gotTask, valid := server.validAccount(w, r, req.ID)
+	gotTask, valid := server.validTask(w, r, req.ID)
 	if !valid {
 		return
 	}
@@ -179,7 +179,7 @@ func (server *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gotTask, valid := server.validAccount(w, r, req.ID)
+	gotTask, valid := server.validTask(w, r, req.ID)
 	if !valid {
 		return
 	}
@@ -202,7 +202,7 @@ func (server *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (server *Server) validAccount(w http.ResponseWriter, r *http.Request, id int64) (db.Task, bool) {
+func (server *Server) validTask(w http.ResponseWriter, r *http.Request, id int64) (db.Task, bool) {
 	gotTask, err := server.store.GetTask(context.Background(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {

@@ -40,6 +40,7 @@ func (server *Server) setupRouter() {
 	router.HandleFunc("/", Home).Methods("GET")
 
 	router.HandleFunc("/users", server.createUser).Methods("POST")
+	router.HandleFunc("/users/login", server.loginUser).Methods("POST")
 	router.HandleFunc("/users", authMiddleware(server.getUser, server.tokenMaker)).Methods("GET")
 
 	router.HandleFunc("/tasks", authMiddleware(server.createTask, server.tokenMaker)).Methods("POST")

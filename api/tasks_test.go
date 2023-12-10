@@ -625,7 +625,7 @@ func TestDeleteTaskAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "InternalServerErrorValidAccount",
+			name: "InternalServerErrorValidTask",
 			body: map[string]any{"id": task.ID},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
