@@ -189,26 +189,6 @@ func TestGetRequirements(t *testing.T) {
 			},
 			isErr: false,
 		},
-		/*{
-			name: "Wrong requirements",
-			obj: struct {
-				Username string `json:"username" requirements:"rqurd"`
-				Email    string `json:"email" requirements:"rqurd;ml"`
-				Password string `json:"password" requirements:"rqurd;mn=8"`
-			}{},
-			requirements: nil,
-			isErr:        true,
-		},
-		{
-			name: "Not values",
-			obj: struct {
-				Username string `json:"username" requirements:"max="`
-				Email    string `json:"email" requirements:"min="`
-				Password string `json:"password" requirements:"min="`
-			}{},
-			requirements: nil,
-			isErr:        true,
-		},*/
 	}
 
 	for _, x := range tests {
