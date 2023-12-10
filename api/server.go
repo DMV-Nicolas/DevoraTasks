@@ -6,31 +6,50 @@ import (
 	"net/http"
 
 	db "github.com/DMV-Nicolas/DevoraTasks/db/sqlc"
+	"github.com/DMV-Nicolas/DevoraTasks/token"
+	"github.com/DMV-Nicolas/DevoraTasks/util"
 	"github.com/gorilla/mux"
 )
 
 type Server struct {
-	db     db.Store
-	router *mux.Router
+	config     util.Config
+	store      db.Store
+	tokenMaker token.Maker
+	router     *mux.Router
 }
 
-func NewServer(db db.Store) *Server {
-	server := &Server{db: db}
-	router := mux.NewRouter()
+func NewServer(config util.Config, store db.Store) (*Server, error) {
+	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
+	if err != nil {
+		return nil, err
+	}
 
+	server := &Server{
+		config:     config,
+		store:      store,
+		tokenMaker: tokenMaker,
+	}
+
+	server.setupRouter()
+
+	return server, nil
+}
+
+func (server *Server) setupRouter() {
+	router := mux.NewRouter()
 	router.HandleFunc("/", Home).Methods("GET")
 
 	router.HandleFunc("/users", server.createUser).Methods("POST")
-	router.HandleFunc("/users/{id}", server.getUser).Methods("GET")
+	router.HandleFunc("/users/login", server.loginUser).Methods("POST")
+	router.HandleFunc("/users", authMiddleware(server.getUser, server.tokenMaker)).Methods("GET")
 
-	router.HandleFunc("/tasks", server.createTask).Methods("POST")
-	router.HandleFunc("/tasks", server.listTasks).Methods("GET")
-	router.HandleFunc("/tasks/{id}", server.getTask).Methods("GET")
-	router.HandleFunc("/tasks", server.updateTask).Methods("PUT")
-	router.HandleFunc("/tasks", server.deleteTask).Methods("DELETE")
+	router.HandleFunc("/tasks", authMiddleware(server.createTask, server.tokenMaker)).Methods("POST")
+	router.HandleFunc("/tasks", authMiddleware(server.listTasks, server.tokenMaker)).Methods("GET")
+	router.HandleFunc("/tasks/{id}", authMiddleware(server.getTask, server.tokenMaker)).Methods("GET")
+	router.HandleFunc("/tasks", authMiddleware(server.updateTask, server.tokenMaker)).Methods("PUT")
+	router.HandleFunc("/tasks", authMiddleware(server.deleteTask, server.tokenMaker)).Methods("DELETE")
 
 	server.router = router
-	return server
 }
 
 func (server *Server) Start(address string) error {

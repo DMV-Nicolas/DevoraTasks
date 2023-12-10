@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	mockdb "github.com/DMV-Nicolas/DevoraTasks/db/mock"
 	db "github.com/DMV-Nicolas/DevoraTasks/db/sqlc"
+	"github.com/DMV-Nicolas/DevoraTasks/token"
 	"github.com/DMV-Nicolas/DevoraTasks/util"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -19,24 +21,27 @@ import (
 
 func TestCreateTaskAPI(t *testing.T) {
 	user, _ := randomUser(t)
-	task := randomTask(user.ID)
+	task := randomTask(user.Username)
 
 	testCases := []struct {
 		name          string
 		body          map[string]any
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
 		{
 			name: "OK",
 			body: map[string]any{
-				"user_id":     task.UserID,
 				"title":       task.Title,
 				"description": task.Description,
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.CreateTaskParams{
-					UserID:      task.UserID,
+					Owner:       task.Owner,
 					Title:       task.Title,
 					Description: task.Description,
 				}
@@ -53,9 +58,11 @@ func TestCreateTaskAPI(t *testing.T) {
 		{
 			name: "InternalServerError",
 			body: map[string]any{
-				"user_id":     task.UserID,
 				"title":       task.Title,
 				"description": task.Description,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -70,9 +77,11 @@ func TestCreateTaskAPI(t *testing.T) {
 		{
 			name: "InvalidUserID",
 			body: map[string]any{
-				"user_id":     task.UserID,
 				"title":       task.Title,
 				"description": task.Description,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -87,9 +96,11 @@ func TestCreateTaskAPI(t *testing.T) {
 		{
 			name: "InvalidTitle",
 			body: map[string]any{
-				"user_id":     task.UserID,
 				"title":       "",
 				"description": task.Description,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -115,15 +126,15 @@ func TestCreateTaskAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := "/tasks"
 			request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
 			require.NoError(t, err)
 
+			tc.setupAuth(t, request, server.tokenMaker)
 			server.router.ServeHTTP(recorder, request)
-
 			tc.checkResponse(t, recorder)
 		})
 	}
@@ -131,17 +142,21 @@ func TestCreateTaskAPI(t *testing.T) {
 
 func TestGetTaskAPI(t *testing.T) {
 	user, _ := randomUser(t)
-	task := randomTask(user.ID)
+	task := randomTask(user.Username)
 
 	testCases := []struct {
 		name          string
 		taskID        int64
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
 		{
 			name:   "OK",
 			taskID: task.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetTask(gomock.Any(), gomock.Eq(task.ID)).
@@ -156,6 +171,9 @@ func TestGetTaskAPI(t *testing.T) {
 		{
 			name:   "NotFound",
 			taskID: task.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetTask(gomock.Any(), gomock.Any()).
@@ -169,6 +187,9 @@ func TestGetTaskAPI(t *testing.T) {
 		{
 			name:   "InternalServerError",
 			taskID: task.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetTask(gomock.Any(), gomock.Any()).
@@ -182,6 +203,9 @@ func TestGetTaskAPI(t *testing.T) {
 		{
 			name:   "InvalidID",
 			taskID: 0,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetTask(gomock.Any(), gomock.Any()).
@@ -189,6 +213,22 @@ func TestGetTaskAPI(t *testing.T) {
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:   "UnauthorizedUser",
+			taskID: task.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "pepito", time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetTask(gomock.Any(), gomock.Eq(task.ID)).
+					Times(1).
+					Return(task, nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
 			},
 		},
 	}
@@ -202,15 +242,15 @@ func TestGetTaskAPI(t *testing.T) {
 			tc.buildStubs(store)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := fmt.Sprintf("/tasks/%d", tc.taskID)
 			request, err := http.NewRequest(http.MethodGet, url, nil)
 			require.NoError(t, err)
 
+			tc.setupAuth(t, request, server.tokenMaker)
 			server.router.ServeHTTP(recorder, request)
-
 			tc.checkResponse(t, recorder)
 		})
 	}
@@ -222,7 +262,7 @@ func TestListTasksAPI(t *testing.T) {
 	n := 5
 	tasks := make([]db.Task, n)
 	for i := 0; i < n; i++ {
-		tasks[i] = randomTask(user.ID)
+		tasks[i] = randomTask(user.Username)
 	}
 
 	type Query struct {
@@ -233,6 +273,7 @@ func TestListTasksAPI(t *testing.T) {
 	testCases := []struct {
 		name          string
 		query         Query
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
@@ -242,8 +283,12 @@ func TestListTasksAPI(t *testing.T) {
 				offset: 0,
 				limit:  int32(n),
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.ListTasksParams{
+					Owner:  user.Username,
 					Offset: 0,
 					Limit:  5,
 				}
@@ -264,6 +309,9 @@ func TestListTasksAPI(t *testing.T) {
 				offset: 0,
 				limit:  int32(n),
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					ListTasks(gomock.Any(), gomock.Any()).
@@ -280,6 +328,9 @@ func TestListTasksAPI(t *testing.T) {
 				offset: -1,
 				limit:  int32(n),
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					ListTasks(gomock.Any(), gomock.Any()).
@@ -294,6 +345,9 @@ func TestListTasksAPI(t *testing.T) {
 			query: Query{
 				offset: 0,
 				limit:  0,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -315,7 +369,7 @@ func TestListTasksAPI(t *testing.T) {
 			tc.buildStubs(store)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := "/tasks"
@@ -328,8 +382,8 @@ func TestListTasksAPI(t *testing.T) {
 			q.Add("limit", fmt.Sprintf("%d", tc.query.limit))
 			request.URL.RawQuery = q.Encode()
 
+			tc.setupAuth(t, request, server.tokenMaker)
 			server.router.ServeHTTP(recorder, request)
-
 			tc.checkResponse(t, recorder)
 		})
 	}
@@ -337,14 +391,15 @@ func TestListTasksAPI(t *testing.T) {
 
 func TestUpdateTaskAPI(t *testing.T) {
 	user, _ := randomUser(t)
-	task1 := randomTask(user.ID)
-	task2 := randomTask(user.ID)
+	task1 := randomTask(user.Username)
+	task2 := randomTask(user.Username)
 	task2.ID = task1.ID
 	task2.Done = true
 
 	testCases := []struct {
 		name          string
 		body          map[string]any
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
@@ -356,7 +411,12 @@ func TestUpdateTaskAPI(t *testing.T) {
 				"description": task2.Description,
 				"done":        task2.Done,
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetTask(gomock.Any(), gomock.Eq(task1.ID)).Times(1).Return(task1, nil)
+
 				arg := db.UpdateTaskParams{
 					ID:          task2.ID,
 					Title:       task2.Title,
@@ -382,11 +442,14 @@ func TestUpdateTaskAPI(t *testing.T) {
 				"description": task2.Description,
 				"done":        task2.Done,
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetTask(gomock.Any(), gomock.Any()).Times(1).Return(db.Task{}, sql.ErrNoRows)
 				store.EXPECT().
 					UpdateTask(gomock.Any(), gomock.Any()).
-					Times(1).
-					Return(db.Task{}, sql.ErrNoRows)
+					Times(0)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, recorder.Code)
@@ -400,7 +463,11 @@ func TestUpdateTaskAPI(t *testing.T) {
 				"description": task2.Description,
 				"done":        task2.Done,
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetTask(gomock.Any(), gomock.Eq(task1.ID)).Times(1).Return(task1, nil)
 				store.EXPECT().
 					UpdateTask(gomock.Any(), gomock.Any()).
 					Times(1).
@@ -418,10 +485,12 @@ func TestUpdateTaskAPI(t *testing.T) {
 				"description": task2.Description,
 				"done":        task2.Done,
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().
-					UpdateTask(gomock.Any(), gomock.Any()).
-					Times(0)
+				store.EXPECT().GetTask(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().UpdateTask(gomock.Any(), gomock.Any()).Times(0)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, recorder.Code)
@@ -435,13 +504,34 @@ func TestUpdateTaskAPI(t *testing.T) {
 				"description": task2.Description,
 				"done":        task2.Done,
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().
-					UpdateTask(gomock.Any(), gomock.Any()).
-					Times(0)
+				store.EXPECT().GetTask(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().UpdateTask(gomock.Any(), gomock.Any()).Times(0)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "UnauthorizedUser",
+			body: map[string]any{
+				"id":          task2.ID,
+				"title":       task2.Title,
+				"description": task2.Description,
+				"done":        task2.Done,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "pepito", time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetTask(gomock.Any(), gomock.Eq(task1.ID)).Times(1).Return(task1, nil)
+				store.EXPECT().UpdateTask(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
 			},
 		},
 	}
@@ -459,15 +549,15 @@ func TestUpdateTaskAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := "/tasks"
 			request, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(data))
 			require.NoError(t, err)
 
+			tc.setupAuth(t, request, server.tokenMaker)
 			server.router.ServeHTTP(recorder, request)
-
 			tc.checkResponse(t, recorder)
 		})
 	}
@@ -475,18 +565,23 @@ func TestUpdateTaskAPI(t *testing.T) {
 
 func TestDeleteTaskAPI(t *testing.T) {
 	user, _ := randomUser(t)
-	task := randomTask(user.ID)
+	task := randomTask(user.Username)
 
 	testCases := []struct {
 		name          string
 		body          map[string]any
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
 		{
 			name: "OK",
 			body: map[string]any{"id": task.ID},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetTask(gomock.Any(), gomock.Eq(task.ID)).Times(1).Return(task, nil)
 				store.EXPECT().
 					DeleteTask(gomock.Any(), gomock.Eq(task.ID)).
 					Times(1).
@@ -499,11 +594,14 @@ func TestDeleteTaskAPI(t *testing.T) {
 		{
 			name: "NotFound",
 			body: map[string]any{"id": task.ID},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetTask(gomock.Any(), gomock.Any()).Times(1).Return(db.Task{}, sql.ErrNoRows)
 				store.EXPECT().
 					DeleteTask(gomock.Any(), gomock.Any()).
-					Times(1).
-					Return(sql.ErrNoRows)
+					Times(0)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, recorder.Code)
@@ -512,7 +610,11 @@ func TestDeleteTaskAPI(t *testing.T) {
 		{
 			name: "InternalServerError",
 			body: map[string]any{"id": task.ID},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetTask(gomock.Any(), gomock.Eq(task.ID)).Times(1).Return(task, nil)
 				store.EXPECT().
 					DeleteTask(gomock.Any(), gomock.Any()).
 					Times(1).
@@ -523,15 +625,47 @@ func TestDeleteTaskAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "InvalidID",
-			body: map[string]any{"id": 0},
+			name: "InternalServerErrorValidTask",
+			body: map[string]any{"id": task.ID},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetTask(gomock.Any(), gomock.Any()).Times(1).Return(db.Task{}, sql.ErrConnDone)
 				store.EXPECT().
 					DeleteTask(gomock.Any(), gomock.Any()).
 					Times(0)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "InvalidID",
+			body: map[string]any{"id": 0},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetTask(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().DeleteTask(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "UnauthorizedUser",
+			body: map[string]any{"id": task.ID},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "pepito", time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetTask(gomock.Any(), gomock.Eq(task.ID)).Times(1).Return(task, nil)
+				store.EXPECT().DeleteTask(gomock.Any(), gomock.Eq(task.ID)).Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
 			},
 		},
 	}
@@ -549,24 +683,24 @@ func TestDeleteTaskAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := "/tasks"
 			request, err := http.NewRequest(http.MethodDelete, url, bytes.NewReader(data))
 			require.NoError(t, err)
 
+			tc.setupAuth(t, request, server.tokenMaker)
 			server.router.ServeHTTP(recorder, request)
-
 			tc.checkResponse(t, recorder)
 		})
 	}
 }
 
-func randomTask(userID int64) db.Task {
+func randomTask(owner string) db.Task {
 	return db.Task{
 		ID:          util.RandomID(),
-		UserID:      userID,
+		Owner:       owner,
 		Title:       util.RandomTitle(),
 		Description: util.RandomPassword(100),
 	}
