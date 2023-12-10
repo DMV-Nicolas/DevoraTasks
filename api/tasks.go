@@ -30,7 +30,7 @@ func (server *Server) createTask(w http.ResponseWriter, r *http.Request) {
 		Description: req.Description,
 	}
 
-	task, err := server.db.CreateTask(context.Background(), arg)
+	task, err := server.store.CreateTask(context.Background(), arg)
 	if err != nil {
 		if db.ErrorCode(err) == db.ForeignKeyViolation {
 			w.WriteHeader(http.StatusBadRequest)
@@ -65,7 +65,7 @@ func (server *Server) listTasks(w http.ResponseWriter, r *http.Request) {
 		Limit:  req.Limit,
 	}
 
-	tasks, err := server.db.ListTasks(context.Background(), arg)
+	tasks, err := server.store.ListTasks(context.Background(), arg)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(errorResponse(err))
@@ -89,7 +89,7 @@ func (server *Server) getTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := server.db.GetTask(context.Background(), req.ID)
+	task, err := server.store.GetTask(context.Background(), req.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)
@@ -128,7 +128,7 @@ func (server *Server) updateTask(w http.ResponseWriter, r *http.Request) {
 		Done:        req.Done,
 	}
 
-	task, err := server.db.UpdateTask(context.Background(), arg)
+	task, err := server.store.UpdateTask(context.Background(), arg)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)
@@ -158,7 +158,7 @@ func (server *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = server.db.DeleteTask(context.Background(), req.ID)
+	err = server.store.DeleteTask(context.Background(), req.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)

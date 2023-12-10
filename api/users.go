@@ -37,7 +37,7 @@ func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 		HashedPassword: hashedPassword,
 	}
 
-	user, err := server.db.CreateUser(context.Background(), arg)
+	user, err := server.store.CreateUser(context.Background(), arg)
 	fmt.Println(err)
 	if err != nil {
 		if db.ErrorCode(err) == db.UniqueViolation {
@@ -67,7 +67,7 @@ func (server *Server) getUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := server.db.GetUser(context.Background(), req.ID)
+	user, err := server.store.GetUser(context.Background(), req.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)

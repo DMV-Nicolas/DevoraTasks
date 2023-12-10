@@ -174,7 +174,7 @@ func TestCreateUserAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := "/users"
@@ -259,7 +259,7 @@ func TestGetUserAPI(t *testing.T) {
 			tc.buildStubs(store)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := fmt.Sprintf("/users/%d", tc.userID)
