@@ -6,6 +6,7 @@ require (
 	github.com/aead/chacha20poly1305 v0.0.0-20201124145622-1a5aba2a8b29
 	github.com/golang/mock v1.4.4
 	github.com/google/uuid v1.1.2
+	github.com/gorilla/context v1.1.2
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.5.0
 	github.com/lib/pq v1.10.9

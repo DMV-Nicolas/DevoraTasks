@@ -1,5 +1,5 @@
 -- name: CreateTask :one
-INSERT INTO tasks (user_id,title,description)
+INSERT INTO tasks (owner,title,description)
 VALUES ($1,$2,$3)
 RETURNING *;
 
@@ -10,9 +10,10 @@ LIMIT 1;
 
 -- name: ListTasks :many
 SELECT * FROM tasks
+WHERE owner = $1
 ORDER BY id
-OFFSET $1
-LIMIT $2;
+OFFSET $2
+LIMIT $3;
 
 -- name: UpdateTask :one
 UPDATE tasks

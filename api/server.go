@@ -40,13 +40,13 @@ func (server *Server) setupRouter() {
 	router.HandleFunc("/", Home).Methods("GET")
 
 	router.HandleFunc("/users", server.createUser).Methods("POST")
-	router.HandleFunc("/users/{id}", server.getUser).Methods("GET")
+	router.HandleFunc("/users", authMiddleware(server.getUser, server.tokenMaker)).Methods("GET")
 
-	router.HandleFunc("/tasks", server.createTask).Methods("POST")
-	router.HandleFunc("/tasks", server.listTasks).Methods("GET")
-	router.HandleFunc("/tasks/{id}", server.getTask).Methods("GET")
-	router.HandleFunc("/tasks", server.updateTask).Methods("PUT")
-	router.HandleFunc("/tasks", server.deleteTask).Methods("DELETE")
+	router.HandleFunc("/tasks", authMiddleware(server.createTask, server.tokenMaker)).Methods("POST")
+	router.HandleFunc("/tasks", authMiddleware(server.listTasks, server.tokenMaker)).Methods("GET")
+	router.HandleFunc("/tasks/{id}", authMiddleware(server.getTask, server.tokenMaker)).Methods("GET")
+	router.HandleFunc("/tasks", authMiddleware(server.updateTask, server.tokenMaker)).Methods("PUT")
+	router.HandleFunc("/tasks", authMiddleware(server.deleteTask, server.tokenMaker)).Methods("DELETE")
 
 	server.router = router
 }

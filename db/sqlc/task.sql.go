@@ -10,23 +10,23 @@ import (
 )
 
 const createTask = `-- name: CreateTask :one
-INSERT INTO tasks (user_id,title,description)
+INSERT INTO tasks (owner,title,description)
 VALUES ($1,$2,$3)
-RETURNING id, user_id, title, description, done, created_at
+RETURNING id, owner, title, description, done, created_at
 `
 
 type CreateTaskParams struct {
-	UserID      int64  `json:"user_id"`
+	Owner       string `json:"owner"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
-	row := q.db.QueryRowContext(ctx, createTask, arg.UserID, arg.Title, arg.Description)
+	row := q.db.QueryRowContext(ctx, createTask, arg.Owner, arg.Title, arg.Description)
 	var i Task
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
+		&i.Owner,
 		&i.Title,
 		&i.Description,
 		&i.Done,
@@ -46,7 +46,7 @@ func (q *Queries) DeleteTask(ctx context.Context, id int64) error {
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, user_id, title, description, done, created_at FROM tasks
+SELECT id, owner, title, description, done, created_at FROM tasks
 WHERE id = $1 
 LIMIT 1
 `
@@ -56,7 +56,7 @@ func (q *Queries) GetTask(ctx context.Context, id int64) (Task, error) {
 	var i Task
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
+		&i.Owner,
 		&i.Title,
 		&i.Description,
 		&i.Done,
@@ -66,19 +66,21 @@ func (q *Queries) GetTask(ctx context.Context, id int64) (Task, error) {
 }
 
 const listTasks = `-- name: ListTasks :many
-SELECT id, user_id, title, description, done, created_at FROM tasks
+SELECT id, owner, title, description, done, created_at FROM tasks
+WHERE owner = $1
 ORDER BY id
-OFFSET $1
-LIMIT $2
+OFFSET $2
+LIMIT $3
 `
 
 type ListTasksParams struct {
-	Offset int32 `json:"offset"`
-	Limit  int32 `json:"limit"`
+	Owner  string `json:"owner"`
+	Offset int32  `json:"offset"`
+	Limit  int32  `json:"limit"`
 }
 
 func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {
-	rows, err := q.db.QueryContext(ctx, listTasks, arg.Offset, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, listTasks, arg.Owner, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +90,7 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, e
 		var i Task
 		if err := rows.Scan(
 			&i.ID,
-			&i.UserID,
+			&i.Owner,
 			&i.Title,
 			&i.Description,
 			&i.Done,
@@ -113,7 +115,7 @@ SET title = $2,
 description = $3,
 done = $4
 WHERE id = $1
-RETURNING id, user_id, title, description, done, created_at
+RETURNING id, owner, title, description, done, created_at
 `
 
 type UpdateTaskParams struct {
@@ -133,7 +135,7 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 	var i Task
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
+		&i.Owner,
 		&i.Title,
 		&i.Description,
 		&i.Done,

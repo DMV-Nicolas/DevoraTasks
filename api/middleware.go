@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/DMV-Nicolas/DevoraTasks/token"
+	ctx "github.com/gorilla/context"
 )
 
 const (
@@ -43,7 +44,7 @@ func authMiddleware(nextHandler http.HandlerFunc, tokenMaker token.Maker) http.H
 			return
 		}
 
-		fmt.Println(payload)
+		ctx.Set(r, authorizationPayloadKey, payload)
 		nextHandler.ServeHTTP(w, r)
 	})
 }

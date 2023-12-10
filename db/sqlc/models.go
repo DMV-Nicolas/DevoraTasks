@@ -10,7 +10,7 @@ import (
 
 type Task struct {
 	ID          int64     `json:"id"`
-	UserID      int64     `json:"user_id"`
+	Owner       string    `json:"owner"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
 	Done        bool      `json:"done"`
@@ -18,7 +18,6 @@ type Task struct {
 }
 
 type User struct {
-	ID                int64     `json:"id"`
 	Username          string    `json:"username"`
 	Email             string    `json:"email"`
 	HashedPassword    string    `json:"hashed_password"`

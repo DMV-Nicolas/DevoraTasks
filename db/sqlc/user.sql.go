@@ -12,7 +12,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (username,email,hashed_password)
 VALUES ($1,$2,$3)
-RETURNING id, username, email, hashed_password, password_changed_at, created_at
+RETURNING username, email, hashed_password, password_changed_at, created_at
 `
 
 type CreateUserParams struct {
@@ -25,7 +25,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	row := q.db.QueryRowContext(ctx, createUser, arg.Username, arg.Email, arg.HashedPassword)
 	var i User
 	err := row.Scan(
-		&i.ID,
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
@@ -37,25 +36,24 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 
 const deleteUser = `-- name: DeleteUser :exec
 DELETE FROM users
-WHERE id = $1
+WHERE username = $1
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteUser, id)
+func (q *Queries) DeleteUser(ctx context.Context, username string) error {
+	_, err := q.db.ExecContext(ctx, deleteUser, username)
 	return err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, email, hashed_password, password_changed_at, created_at FROM users
-WHERE id = $1 
+SELECT username, email, hashed_password, password_changed_at, created_at FROM users
+WHERE username = $1 
 LIMIT 1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUser, id)
+func (q *Queries) GetUser(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUser, username)
 	var i User
 	err := row.Scan(
-		&i.ID,
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
@@ -66,8 +64,8 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, hashed_password, password_changed_at, created_at FROM users
-ORDER BY id
+SELECT username, email, hashed_password, password_changed_at, created_at FROM users
+ORDER BY username
 LIMIT $1
 OFFSET $2
 `
@@ -87,7 +85,6 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 	for rows.Next() {
 		var i User
 		if err := rows.Scan(
-			&i.ID,
 			&i.Username,
 			&i.Email,
 			&i.HashedPassword,
@@ -109,30 +106,22 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-SET username= $2,
-email = $3,
-hashed_password = $4
-WHERE id = $1
-RETURNING id, username, email, hashed_password, password_changed_at, created_at
+SET email = $2,
+hashed_password = $3
+WHERE username = $1
+RETURNING username, email, hashed_password, password_changed_at, created_at
 `
 
 type UpdateUserParams struct {
-	ID             int64  `json:"id"`
 	Username       string `json:"username"`
 	Email          string `json:"email"`
 	HashedPassword string `json:"hashed_password"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, updateUser,
-		arg.ID,
-		arg.Username,
-		arg.Email,
-		arg.HashedPassword,
-	)
+	row := q.db.QueryRowContext(ctx, updateUser, arg.Username, arg.Email, arg.HashedPassword)
 	var i User
 	err := row.Scan(
-		&i.ID,
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,

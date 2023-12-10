@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"net/http"
 
+	ctx "github.com/gorilla/context"
+
 	db "github.com/DMV-Nicolas/DevoraTasks/db/sqlc"
+	"github.com/DMV-Nicolas/DevoraTasks/token"
 	"github.com/DMV-Nicolas/DevoraTasks/util"
 )
 
@@ -54,20 +57,9 @@ func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResponse(user))
 }
 
-type getUserRequest struct {
-	ID int64 `uri:"id" requirements:"required;min=1"`
-}
-
 func (server *Server) getUser(w http.ResponseWriter, r *http.Request) {
-	var req getUserRequest
-	err := util.ShouldBindUri(r, &req)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(errorResponse(err))
-		return
-	}
-
-	user, err := server.store.GetUser(context.Background(), req.ID)
+	payload := ctx.Get(r, authorizationPayloadKey).(*token.Payload)
+	user, err := server.store.GetUser(context.Background(), payload.Username)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)

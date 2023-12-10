@@ -3,14 +3,16 @@ package api
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 
 	db "github.com/DMV-Nicolas/DevoraTasks/db/sqlc"
+	"github.com/DMV-Nicolas/DevoraTasks/token"
 	"github.com/DMV-Nicolas/DevoraTasks/util"
+	ctx "github.com/gorilla/context"
 )
 
 type createTaskRequest struct {
-	UserID      int64  `json:"user_id" requirements:"min=1"`
 	Title       string `json:"title" requirements:"required"`
 	Description string `json:"description"`
 }
@@ -24,8 +26,9 @@ func (server *Server) createTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	payload := ctx.Get(r, authorizationPayloadKey).(*token.Payload)
 	arg := db.CreateTaskParams{
-		UserID:      req.UserID,
+		Owner:       payload.Username,
 		Title:       req.Title,
 		Description: req.Description,
 	}
@@ -60,7 +63,9 @@ func (server *Server) listTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	payload := ctx.Get(r, authorizationPayloadKey).(*token.Payload)
 	arg := db.ListTasksParams{
+		Owner:  payload.Username,
 		Offset: req.Offset,
 		Limit:  req.Limit,
 	}
@@ -101,6 +106,14 @@ func (server *Server) getTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	payload := ctx.Get(r, authorizationPayloadKey).(*token.Payload)
+	if payload.Username != task.Owner {
+		err = fmt.Errorf("account doesn't belong to the authenticated user")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write(errorResponse(err))
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonResponse(task))
 }
@@ -121,6 +134,19 @@ func (server *Server) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	gotTask, valid := server.validAccount(w, r, req.ID)
+	if !valid {
+		return
+	}
+
+	payload := ctx.Get(r, authorizationPayloadKey).(*token.Payload)
+	if payload.Username != gotTask.Owner {
+		err = fmt.Errorf("account doesn't belong to the authenticated user")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write(errorResponse(err))
+		return
+	}
+
 	arg := db.UpdateTaskParams{
 		ID:          req.ID,
 		Title:       req.Title,
@@ -130,11 +156,6 @@ func (server *Server) updateTask(w http.ResponseWriter, r *http.Request) {
 
 	task, err := server.store.UpdateTask(context.Background(), arg)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write(errorResponse(err))
-			return
-		}
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(errorResponse(err))
 		return
@@ -158,17 +179,41 @@ func (server *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	gotTask, valid := server.validAccount(w, r, req.ID)
+	if !valid {
+		return
+	}
+
+	payload := ctx.Get(r, authorizationPayloadKey).(*token.Payload)
+	if payload.Username != gotTask.Owner {
+		err = fmt.Errorf("account doesn't belong to the authenticated user")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write(errorResponse(err))
+		return
+	}
+
 	err = server.store.DeleteTask(context.Background(), req.ID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write(errorResponse(err))
-			return
-		}
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(errorResponse(err))
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (server *Server) validAccount(w http.ResponseWriter, r *http.Request, id int64) (db.Task, bool) {
+	gotTask, err := server.store.GetTask(context.Background(), id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write(errorResponse(err))
+			return db.Task{}, false
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(errorResponse(err))
+		return db.Task{}, false
+	}
+
+	return gotTask, true
 }

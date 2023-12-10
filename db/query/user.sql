@@ -5,23 +5,22 @@ RETURNING *;
 
 -- name: GetUser :one
 SELECT * FROM users
-WHERE id = $1 
+WHERE username = $1 
 LIMIT 1;
 
 -- name: ListUsers :many
 SELECT * FROM users
-ORDER BY id
+ORDER BY username
 LIMIT $1
 OFFSET $2;
 
 -- name: UpdateUser :one
 UPDATE users
-SET username= $2,
-email = $3,
-hashed_password = $4
-WHERE id = $1
+SET email = $2,
+hashed_password = $3
+WHERE username = $1
 RETURNING *;
 
 -- name: DeleteUser :exec
 DELETE FROM users
-WHERE id = $1;
+WHERE username = $1;

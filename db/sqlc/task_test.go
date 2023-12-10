@@ -13,7 +13,7 @@ import (
 func createRandomTask(t *testing.T, name string) Task {
 	user := createRandomUser(t)
 	arg := CreateTaskParams{
-		UserID:      user.ID,
+		Owner:       user.Username,
 		Title:       util.RandomTitle(),
 		Description: name,
 	}
@@ -22,7 +22,7 @@ func createRandomTask(t *testing.T, name string) Task {
 	require.NoError(t, err)
 	require.NotEmpty(t, task)
 
-	require.Equal(t, arg.UserID, task.UserID)
+	require.Equal(t, arg.Owner, task.Owner)
 	require.Equal(t, arg.Title, task.Title)
 	require.Equal(t, arg.Description, task.Description)
 
@@ -41,7 +41,7 @@ func TestGetTask(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, task2)
 
-	require.Equal(t, task1.UserID, task2.UserID)
+	require.Equal(t, task1.Owner, task2.Owner)
 	require.Equal(t, task1.Title, task2.Title)
 	require.Equal(t, task1.Description, task2.Description)
 
@@ -49,18 +49,20 @@ func TestGetTask(t *testing.T) {
 }
 
 func TestListTasks(t *testing.T) {
+	var lastTask Task
 	for i := 0; i < 5; i++ {
-		createRandomTask(t, "List task")
+		lastTask = createRandomTask(t, "List task")
 	}
 
 	arg := ListTasksParams{
+		Owner:  lastTask.Owner,
 		Limit:  5,
 		Offset: 0,
 	}
 
 	tasks, err := testQueries.ListTasks(context.Background(), arg)
 	require.NoError(t, err)
-	require.Len(t, tasks, 5)
+	require.NotEmpty(t, tasks)
 
 	for _, task := range tasks {
 		require.NotEmpty(t, task)
