@@ -6,18 +6,37 @@ import (
 	"net/http"
 
 	db "github.com/DMV-Nicolas/DevoraTasks/db/sqlc"
+	"github.com/DMV-Nicolas/DevoraTasks/token"
+	"github.com/DMV-Nicolas/DevoraTasks/util"
 	"github.com/gorilla/mux"
 )
 
 type Server struct {
-	db     db.Store
-	router *mux.Router
+	config     util.Config
+	store      db.Store
+	tokenMaker token.Maker
+	router     *mux.Router
 }
 
-func NewServer(db db.Store) *Server {
-	server := &Server{db: db}
-	router := mux.NewRouter()
+func NewServer(config util.Config, store db.Store) (*Server, error) {
+	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
+	if err != nil {
+		return nil, err
+	}
 
+	server := &Server{
+		config:     config,
+		store:      store,
+		tokenMaker: tokenMaker,
+	}
+
+	server.setupRouter()
+
+	return server, nil
+}
+
+func (server *Server) setupRouter() {
+	router := mux.NewRouter()
 	router.HandleFunc("/", Home).Methods("GET")
 
 	router.HandleFunc("/users", server.createUser).Methods("POST")
@@ -30,7 +49,6 @@ func NewServer(db db.Store) *Server {
 	router.HandleFunc("/tasks", server.deleteTask).Methods("DELETE")
 
 	server.router = router
-	return server
 }
 
 func (server *Server) Start(address string) error {

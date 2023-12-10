@@ -115,7 +115,7 @@ func TestCreateTaskAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := "/tasks"
@@ -202,7 +202,7 @@ func TestGetTaskAPI(t *testing.T) {
 			tc.buildStubs(store)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := fmt.Sprintf("/tasks/%d", tc.taskID)
@@ -315,7 +315,7 @@ func TestListTasksAPI(t *testing.T) {
 			tc.buildStubs(store)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := "/tasks"
@@ -459,7 +459,7 @@ func TestUpdateTaskAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := "/tasks"
@@ -549,7 +549,7 @@ func TestDeleteTaskAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			// start test server and send request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := "/tasks"
