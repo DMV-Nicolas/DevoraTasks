@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -21,14 +20,7 @@ type createUserRequest struct {
 
 func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	var req createUserRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(errorResponse(err))
-		return
-	}
-
-	err = util.VerifyRequirements(req)
+	err := util.ShouldBindJSON(r.Body, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))

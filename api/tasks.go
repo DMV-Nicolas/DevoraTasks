@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -20,14 +19,7 @@ type createTaskRequest struct {
 
 func (server *Server) createTask(w http.ResponseWriter, r *http.Request) {
 	var req createTaskRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(errorResponse(err))
-		return
-	}
-
-	err = util.VerifyRequirements(req)
+	err := util.ShouldBindJSON(r.Body, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))
@@ -134,14 +126,7 @@ type updateTaskRequest struct {
 
 func (server *Server) updateTask(w http.ResponseWriter, r *http.Request) {
 	var req updateTaskRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(errorResponse(err))
-		return
-	}
-
-	err = util.VerifyRequirements(req)
+	err := util.ShouldBindJSON(r.Body, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))
@@ -178,14 +163,7 @@ type deleteTaskRequest struct {
 
 func (server *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
 	var req deleteTaskRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(errorResponse(err))
-		return
-	}
-
-	err = util.VerifyRequirements(req)
+	err := util.ShouldBindJSON(r.Body, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))

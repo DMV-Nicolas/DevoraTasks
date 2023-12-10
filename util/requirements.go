@@ -1,7 +1,9 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"regexp"
 	"slices"
@@ -189,4 +191,42 @@ func VerifyRequirements(obj any) error {
 	} else {
 		return fmt.Errorf(errors)
 	}
+}
+
+type object interface {
+	typeOf() reflect.Type
+	valueOf() reflect.Value
+}
+
+type structObject struct {
+	arg1 string
+	arg2 string
+	arg3 string
+}
+
+func (p structObject) typeOf() reflect.Type {
+	return reflect.TypeOf(p)
+}
+
+func (p structObject) valueOf() reflect.Value {
+	return reflect.ValueOf(p)
+}
+
+func ShouldBindJSON(body io.ReadCloser, obj any) error {
+	b, err := io.ReadAll(body)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(b, obj)
+	if err != nil {
+		return err
+	}
+
+	err = VerifyRequirements(reflect.ValueOf(obj).Elem().Interface())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
