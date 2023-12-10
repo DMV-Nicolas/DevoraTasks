@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 var avalaibleRequirements = []string{
@@ -193,27 +196,87 @@ func VerifyRequirements(obj any) error {
 	}
 }
 
-type object interface {
-	typeOf() reflect.Type
-	valueOf() reflect.Value
+func ShouldBindJSON(r *http.Request, obj any) error {
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(b, obj)
+	if err != nil {
+		return err
+	}
+
+	err = VerifyRequirements(reflect.ValueOf(obj).Elem().Interface())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-type structObject struct {
-	arg1 string
-	arg2 string
-	arg3 string
+func ShouldBindUri(r *http.Request, obj any) error {
+	var err error
+	vars := make(map[string]any)
+
+	for k, v := range mux.Vars(r) {
+		vars[k] = v
+	}
+
+	t := reflect.TypeOf(obj).Elem()
+	for i := 0; i < t.NumField(); i++ {
+		uri := t.Field(i).Tag.Get("uri")
+		fieldType := t.Field(i).Type.String()
+		switch fieldType {
+		case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
+			vars[uri], err = strconv.Atoi(vars[uri].(string))
+		case "float64", "float32":
+			vars[uri], err = strconv.ParseFloat(vars[uri].(string), 64)
+		case "bool":
+			vars[uri] = vars[uri].(string)
+		}
+	}
+
+	b, err := json.Marshal(vars)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(b, obj)
+	if err != nil {
+		return err
+	}
+
+	err = VerifyRequirements(reflect.ValueOf(obj).Elem().Interface())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (p structObject) typeOf() reflect.Type {
-	return reflect.TypeOf(p)
-}
+func ShouldBindQuery(r *http.Request, obj any) error {
+	query := make(map[string]any)
 
-func (p structObject) valueOf() reflect.Value {
-	return reflect.ValueOf(p)
-}
+	for k, v := range r.URL.Query() {
+		query[k] = v[0]
+	}
 
-func ShouldBindJSON(body io.ReadCloser, obj any) error {
-	b, err := io.ReadAll(body)
+	t := reflect.TypeOf(obj).Elem()
+	for i := 0; i < t.NumField(); i++ {
+		form := t.Field(i).Tag.Get("form")
+		fieldType := t.Field(i).Type.String()
+		switch fieldType {
+		case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
+			query[form], _ = strconv.Atoi(query[form].(string))
+		case "float64", "float32":
+			query[form], _ = strconv.ParseFloat(query[form].(string), 64)
+		case "bool":
+			query[form] = query[form].(string)
+		}
+	}
+
+	b, err := json.Marshal(query)
 	if err != nil {
 		return err
 	}

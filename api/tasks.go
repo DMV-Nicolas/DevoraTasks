@@ -4,11 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
-	"strconv"
 
 	db "github.com/DMV-Nicolas/DevoraTasks/db/sqlc"
 	"github.com/DMV-Nicolas/DevoraTasks/util"
-	"github.com/gorilla/mux"
 )
 
 type createTaskRequest struct {
@@ -19,7 +17,7 @@ type createTaskRequest struct {
 
 func (server *Server) createTask(w http.ResponseWriter, r *http.Request) {
 	var req createTaskRequest
-	err := util.ShouldBindJSON(r.Body, &req)
+	err := util.ShouldBindJSON(r, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))
@@ -49,20 +47,13 @@ func (server *Server) createTask(w http.ResponseWriter, r *http.Request) {
 }
 
 type listTasksRequest struct {
-	Offset int32 `requirements:"min=0"`
-	Limit  int32 `requirements:"min=1"`
+	Offset int32 `form:"offset" requirements:"min=0"`
+	Limit  int32 `form:"limit" requirements:"min=1"`
 }
 
 func (server *Server) listTasks(w http.ResponseWriter, r *http.Request) {
 	var req listTasksRequest
-
-	v := r.URL.Query()
-	offset, _ := strconv.Atoi(v.Get("offset"))
-	limit, _ := strconv.Atoi(v.Get("limit"))
-
-	req.Offset = int32(offset)
-	req.Limit = int32(limit)
-	err := util.VerifyRequirements(req)
+	err := util.ShouldBindQuery(r, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))
@@ -86,22 +77,19 @@ func (server *Server) listTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 type getTaskRequest struct {
-	ID int64 `requirements:"min=1"`
+	ID int64 `uri:"id" requirements:"min=1"`
 }
 
 func (server *Server) getTask(w http.ResponseWriter, r *http.Request) {
 	var req getTaskRequest
-	id, _ := strconv.Atoi(mux.Vars(r)["id"])
-
-	req.ID = int64(id)
-	err := util.VerifyRequirements(req)
+	err := util.ShouldBindUri(r, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))
 		return
 	}
 
-	task, err := server.db.GetTask(context.Background(), int64(id))
+	task, err := server.db.GetTask(context.Background(), req.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)
@@ -126,7 +114,7 @@ type updateTaskRequest struct {
 
 func (server *Server) updateTask(w http.ResponseWriter, r *http.Request) {
 	var req updateTaskRequest
-	err := util.ShouldBindJSON(r.Body, &req)
+	err := util.ShouldBindJSON(r, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))
@@ -163,7 +151,7 @@ type deleteTaskRequest struct {
 
 func (server *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
 	var req deleteTaskRequest
-	err := util.ShouldBindJSON(r.Body, &req)
+	err := util.ShouldBindJSON(r, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))

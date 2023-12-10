@@ -5,11 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	db "github.com/DMV-Nicolas/DevoraTasks/db/sqlc"
 	"github.com/DMV-Nicolas/DevoraTasks/util"
-	"github.com/gorilla/mux"
 )
 
 type createUserRequest struct {
@@ -20,7 +18,7 @@ type createUserRequest struct {
 
 func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	var req createUserRequest
-	err := util.ShouldBindJSON(r.Body, &req)
+	err := util.ShouldBindJSON(r, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))
@@ -57,15 +55,12 @@ func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 type getUserRequest struct {
-	ID int64 `requirements:"required;min=1"`
+	ID int64 `uri:"id" requirements:"required;min=1"`
 }
 
 func (server *Server) getUser(w http.ResponseWriter, r *http.Request) {
 	var req getUserRequest
-	id, _ := strconv.Atoi(mux.Vars(r)["id"])
-
-	req.ID = int64(id)
-	err := util.VerifyRequirements(req)
+	err := util.ShouldBindUri(r, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errorResponse(err))
