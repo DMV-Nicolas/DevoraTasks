@@ -5,9 +5,9 @@ services:
     environment:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=83postgres19
-      - POSTGRES_DB=bank
+      - POSTGRES_DB=tasks
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d bank -U root"]
+      test: ["CMD-SHELL", "pg_isready -d tasks -U root"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -18,7 +18,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - DB_SOURCE=postgresql://root:83postgres19@postgres:5432/bank?sslmode=disable
+      - DB_SOURCE=postgresql://root:83postgres19@postgres:5432/tasks?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
