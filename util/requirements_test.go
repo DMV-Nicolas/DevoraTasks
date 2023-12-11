@@ -285,5 +285,4 @@ func TestVerifyRequirements(t *testing.T) {
 			require.Equal(t, x.isErr, err != nil)
 		})
 	}
-
 }

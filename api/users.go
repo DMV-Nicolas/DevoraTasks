@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -60,7 +59,6 @@ func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := server.store.CreateUser(context.Background(), arg)
-	fmt.Println(err)
 	if err != nil {
 		if db.ErrorCode(err) == db.UniqueViolation {
 			w.WriteHeader(http.StatusForbidden)
@@ -72,8 +70,10 @@ func (server *Server) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	res := newUserResponse(user)
+
 	w.WriteHeader(http.StatusCreated)
-	w.Write(jsonResponse(user))
+	w.Write(jsonResponse(res))
 }
 
 func (server *Server) getUser(w http.ResponseWriter, r *http.Request) {
@@ -90,8 +90,10 @@ func (server *Server) getUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	res := newUserResponse(user)
+
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonResponse(user))
+	w.Write(jsonResponse(res))
 }
 
 type loginUserRequest struct {
